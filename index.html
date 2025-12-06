@@ -128,6 +128,11 @@
       box-shadow: none;
       border: 1px solid rgba(255, 255, 255, 0.16);
     }
+    .ghost.active {
+      background: rgba(124, 247, 212, 0.18);
+      border-color: rgba(124, 247, 212, 0.5);
+      color: #e8fff7;
+    }
     .canvas-wrap {
       position: relative;
       border-radius: 16px;
@@ -221,6 +226,8 @@
         <div class="actions">
           <button class="ghost" id="fullscreen-toggle">全屏</button>
           <button class="ghost" id="speed-toggle">加速 x3</button>
+          <button class="ghost" id="auto-toggle">自动发射:关</button>
+          <button class="ghost" id="lock-toggle">锁定瞄准:关</button>
           <button id="restart">重新开局</button>
         </div>
       </header>
@@ -247,13 +254,14 @@
         <div class="overlay-tip">鼠标拖动瞄准，松手发射；空格/加速按钮快进</div>
         <div class="fast-flag" id="fast-flag">FAST</div>
       </div>
-      <div class="small">横版：鼠标拖动瞄准，空格/加速按钮快进，回收首球定位下一轮。</div>
+      <div class="small">横版：鼠标拖动瞄准；空格/加速按钮快进；自动发射按当前方向自动开火，“锁定瞄准”可固定发射方向（点击画布设点）。</div>
     </div>
     <div class="card info-card panel">
       <h2>桌面操作</h2>
       <ul class="info-list">
         <li>鼠标拖出瞄准线，松手自动按队列发射全部小球。</li>
         <li>空格按住或点击“加速 x3”按钮可快进；点击“全屏”沉浸体验。</li>
+        <li>“自动发射”会自动开火；“锁定瞄准”可在画布点击设定固定方向，所有发射沿该方向。</li>
         <li>首颗回收位置决定下一回合的发射点，注意预留走位。</li>
       </ul>
       <div class="divider"></div>
@@ -279,6 +287,8 @@
       const speedBtn = document.getElementById('speed-toggle');
       const speedValue = document.getElementById('speed-value');
       const fastFlag = document.getElementById('fast-flag');
+      const autoBtn = document.getElementById('auto-toggle');
+      const lockBtn = document.getElementById('lock-toggle');
 
       const WIDTH = 960;   // 横版宽度
       const HEIGHT = 720;  // 横版高度
@@ -304,6 +314,8 @@
       let score = 0;
       let aimPoint = { x: WIDTH * 0.5, y: HEIGHT * 0.45 };
       let spawn = { x: WIDTH * 0.5, y: HEIGHT - 18 };
+      let lastPointer = { x: WIDTH * 0.5, y: HEIGHT * 0.35 };
+      let pointerActive = false;
       let aiming = true;
       let dragging = false;
       let firstLanding = null;
@@ -313,6 +325,9 @@
       let fastLocked = false;
       let fastHeld = false;
       let fastForward = false;
+      let autoMode = false;
+      let lockedAim = false;
+      let lockedTarget = { x: WIDTH * 0.5, y: HEIGHT * 0.35 };
 
       function clamp(v, min, max) {
         return Math.max(min, Math.min(max, v));
@@ -343,8 +358,8 @@
         pendingBalls = 0;
         round = 1;
         score = 0;
-        spawn = { x: WIDTH * 0.5, y: HEIGHT - 14 };
-        aimPoint = { x: WIDTH * 0.5, y: HEIGHT * 0.35 };
+        spawn = { x: WIDTH * 0.5, y: HEIGHT - 18 };
+        aimPoint = { x: WIDTH * 0.5, y: HEIGHT * 0.45 };
         firstLanding = null;
         aiming = true;
         dragging = false;
@@ -353,7 +368,13 @@
         lastTime = performance.now();
         fastLocked = false;
         fastHeld = false;
+        autoMode = false;
+        pointerActive = false;
         syncSpeedUi();
+        syncAutoUi();
+        lockedAim = false;
+        lockedTarget = { x: WIDTH * 0.5, y: HEIGHT * 0.35 };
+        syncLockUi();
         addRow();
         updateUi();
       }
@@ -369,6 +390,16 @@
         speedValue.textContent = fastForward ? 'x3' : 'x1';
         speedBtn.textContent = fastLocked ? '取消加速' : '加速 x3';
         fastFlag.classList.toggle('show', fastForward);
+      }
+
+      function syncAutoUi() {
+        autoBtn.textContent = autoMode ? '自动发射:开' : '自动发射:关';
+        autoBtn.classList.toggle('active', autoMode);
+      }
+
+      function syncLockUi() {
+        lockBtn.textContent = lockedAim ? '锁定瞄准:开' : '锁定瞄准:关';
+        lockBtn.classList.toggle('active', lockedAim);
       }
 
       function toggleFullscreen() {
@@ -392,26 +423,36 @@
       }
 
       function handlePointerMove(evt) {
-        if (!aiming) return;
-        aimPoint = pointerPos(evt);
+        const pos = pointerPos(evt);
+        lastPointer = pos;
+        pointerActive = true;
+        if (!aiming || lockedAim) return;
+        aimPoint = pos;
       }
 
       function handlePointerDown(evt) {
         if (gameOver) return;
         dragging = true;
-        if (aiming) {
-          aimPoint = pointerPos(evt);
+        const pos = pointerPos(evt);
+        lastPointer = pos;
+        pointerActive = true;
+        if (lockedAim) {
+          lockedTarget = pos;
+          aimPoint = lockedTarget;
+        } else if (aiming) {
+          aimPoint = pos;
         }
       }
 
       function handlePointerUp(evt) {
         if (gameOver || !dragging || !aiming) return;
         dragging = false;
-        const target = pointerPos(evt);
+        const target = lockedAim ? lockedTarget : pointerPos(evt);
         startLaunch(target);
       }
 
       function startLaunch(target) {
+        if (lockedAim) target = lockedTarget;
         let dx = target.x - spawn.x;
         let dy = target.y - spawn.y;
         if (dy > -16) dy = -16; // keep shot upward
@@ -430,6 +471,7 @@
         }
         firstLanding = null;
         aiming = false;
+        dragging = false;
       }
 
       function launchFromQueue(simTimeMs) {
@@ -702,6 +744,22 @@
         ctx.lineTo(endX, endY);
         ctx.stroke();
         ctx.setLineDash([]);
+
+        if (lockedAim) {
+          ctx.strokeStyle = 'rgba(124, 247, 212, 0.7)';
+          ctx.fillStyle = 'rgba(124, 247, 212, 0.25)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(lockedTarget.x, lockedTarget.y, 10, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(lockedTarget.x - 10, lockedTarget.y);
+          ctx.lineTo(lockedTarget.x + 10, lockedTarget.y);
+          ctx.moveTo(lockedTarget.x, lockedTarget.y - 10);
+          ctx.lineTo(lockedTarget.x, lockedTarget.y + 10);
+          ctx.stroke();
+        }
       }
 
       function drawDangerLine() {
@@ -744,11 +802,20 @@
         }
       }
 
+      function maybeAutoFire() {
+        if (!autoMode || !aiming || launchQueue.length || balls.length || gameOver) return;
+        const target = lockedAim
+          ? lockedTarget
+          : (pointerActive ? lastPointer : { x: spawn.x, y: HEIGHT * 0.3 });
+        startLaunch(target);
+      }
+
       function loop() {
         const now = performance.now();
         const realDt = Math.min((now - lastTime) / 1000, 0.04);
         const speed = fastForward ? SPEED_MULT : 1;
         if (!gameOver) {
+          maybeAutoFire();
           stepSimulation(realDt * speed);
         }
         render();
@@ -762,6 +829,18 @@
       restartBtn.addEventListener('click', resetGame);
       fullscreenBtn.addEventListener('click', () => {
         toggleFullscreen();
+      });
+        autoBtn.addEventListener('click', () => {
+          autoMode = !autoMode;
+          syncAutoUi();
+          maybeAutoFire();
+        });
+      lockBtn.addEventListener('click', () => {
+        lockedAim = !lockedAim;
+        if (lockedAim) {
+          lockedTarget = aimPoint;
+        }
+        syncLockUi();
       });
       speedBtn.addEventListener('click', () => {
         fastLocked = !fastLocked;
@@ -786,10 +865,15 @@
       });
       window.addEventListener('resize', resizeCanvas);
       canvas.addEventListener('contextmenu', evt => evt.preventDefault());
+      canvas.addEventListener('pointerleave', () => {
+        pointerActive = false;
+      });
       canvas.style.touchAction = 'none';
 
       resizeCanvas();
       syncFullscreenUi();
+      syncAutoUi();
+      syncLockUi();
       resetGame();
       requestAnimationFrame(loop);
     })();
