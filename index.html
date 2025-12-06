@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ballz Web</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: radial-gradient(circle at 16% 18%, #1b2a44 0, rgba(18, 26, 42, 0.9) 34%, rgba(8, 12, 20, 0.95) 62%, #050910 100%);
+      --panel: rgba(255, 255, 255, 0.07);
+      --muted: #aab9d9;
+      --accent: #7cf7d4;
+      --danger: #ff7b9c;
+      --text: #ecf2ff;
+      --shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 24px;
+    }
+    .shell {
+      width: min(1260px, 100%);
+      min-height: calc(100vh - 48px);
+      display: grid;
+      grid-template-columns: minmax(620px, 1.2fr) 340px;
+      gap: 16px;
+      align-items: start;
+      justify-content: center;
+    }
+    @media (max-width: 1024px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 14px 14px 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.6px;
+    }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(124, 247, 212, 0.12);
+      font-size: 12px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 6px;
+    }
+    .meta .item {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+    .value {
+      display: block;
+      font-weight: 600;
+      font-size: 20px;
+      margin-top: 4px;
+      color: #f8fffa;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #7cf7d4, #7cb7ff);
+      color: #05101d;
+      font-weight: 700;
+      padding: 12px 16px;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      box-shadow: 0 14px 40px rgba(124, 247, 212, 0.32);
+    }
+    button:active { transform: translateY(1px); }
+    .ghost {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      box-shadow: none;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+    .canvas-wrap {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 960 / 720;
+      display: block;
+      margin: 0 auto;
+      background: radial-gradient(circle at 24% 22%, rgba(124, 247, 212, 0.08), rgba(10, 16, 27, 0.92) 58%), #050910;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      max-height: calc(100vh - 180px);
+    }
+    .overlay-tip {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(8, 16, 28, 0.6);
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.3px;
+      pointer-events: none;
+    }
+    .fast-flag {
+      position: absolute;
+      left: 14px;
+      top: 12px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(124, 247, 212, 0.18);
+      color: #e8fff7;
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      border: 1px solid rgba(124, 247, 212, 0.35);
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 140ms ease, transform 140ms ease;
+      pointer-events: none;
+    }
+    .fast-flag.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .panel h2 {
+      margin: 4px 0 6px;
+      font-size: 16px;
+      letter-spacing: 0.4px;
+    }
+    .panel ul, .info-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .footnote {
+      text-align: right;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .info-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="card">
+      <header>
+        <div class="brand">
+          <h1>Ballz Web</h1>
+          <span class="pill">Canvas • 惯性弹射</span>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="fullscreen-toggle">全屏</button>
+          <button class="ghost" id="speed-toggle">加速 x3</button>
+          <button id="restart">重新开局</button>
+        </div>
+      </header>
+      <div class="meta">
+        <div class="item">
+          <span class="label">回合</span>
+          <span class="value" id="round-value">1</span>
+        </div>
+        <div class="item">
+          <span class="label">球数</span>
+          <span class="value" id="balls-value">1</span>
+        </div>
+        <div class="item">
+          <span class="label">得分</span>
+          <span class="value" id="score-value">0</span>
+        </div>
+        <div class="item">
+          <span class="label">加速</span>
+          <span class="value" id="speed-value">x1</span>
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="game" width="960" height="720"></canvas>
+        <div class="overlay-tip">鼠标拖动瞄准，松手发射；空格/加速按钮快进</div>
+        <div class="fast-flag" id="fast-flag">FAST</div>
+      </div>
+      <div class="small">横版：鼠标拖动瞄准，空格/加速按钮快进，回收首球定位下一轮。</div>
+    </div>
+    <div class="card info-card panel">
+      <h2>桌面操作</h2>
+      <ul class="info-list">
+        <li>鼠标拖出瞄准线，松手自动按队列发射全部小球。</li>
+        <li>空格按住或点击“加速 x3”按钮可快进；点击“全屏”沉浸体验。</li>
+        <li>首颗回收位置决定下一回合的发射点，注意预留走位。</li>
+      </ul>
+      <div class="divider"></div>
+      <h2>规则提示</h2>
+      <ul class="info-list">
+        <li>数字砖块每回合下移一格，血量归零即破坏。</li>
+        <li>击中 +1 光球可在回合结束后永久增加小球数量。</li>
+        <li>砖块触线即 Game Over，尝试用贴墙弹射快速清屏。</li>
+      </ul>
+    </div>
+    <div class="footnote">横版桌面布局：左侧战场，右侧规则/快捷键。全屏或加速都可用快捷键/按钮。</div>
+  </div>
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const roundEl = document.getElementById('round-value');
+      const ballsEl = document.getElementById('balls-value');
+      const scoreEl = document.getElementById('score-value');
+      const restartBtn = document.getElementById('restart');
+      const canvasWrap = document.querySelector('.canvas-wrap');
+      const fullscreenBtn = document.getElementById('fullscreen-toggle');
+      const speedBtn = document.getElementById('speed-toggle');
+      const speedValue = document.getElementById('speed-value');
+      const fastFlag = document.getElementById('fast-flag');
+
+      const WIDTH = 960;   // 横版宽度
+      const HEIGHT = 720;  // 横版高度
+      const COLS = 12;
+      const BLOCK_SIZE = WIDTH / COLS;
+      const BALL_RADIUS = 6;
+      const BALL_SPEED = 520;
+      const LAUNCH_SPACING = 80; // ms between shots
+      const DANGER_Y = HEIGHT - BLOCK_SIZE * 1.1;
+      const SPEED_MULT = 3;
+
+      const DPR = Math.min(window.devicePixelRatio || 1, 2);
+      let viewScale = 1;
+
+      let blocks = [];
+      let orbs = [];
+      let balls = [];
+      let launchQueue = [];
+      let totalBalls = 1;
+      let pendingBalls = 0;
+      let round = 1;
+      let score = 0;
+      let aimPoint = { x: WIDTH * 0.5, y: HEIGHT * 0.45 };
+      let spawn = { x: WIDTH * 0.5, y: HEIGHT - 18 };
+      let aiming = true;
+      let dragging = false;
+      let firstLanding = null;
+      let gameOver = false;
+      let lastTime = performance.now();
+      let simTime = 0;
+      let fastLocked = false;
+      let fastHeld = false;
+      let fastForward = false;
+
+      function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+      }
+
+      function resizeCanvas() {
+        const aspect = HEIGHT / WIDTH;
+        const padding = 160;
+        const wrapRect = canvasWrap?.getBoundingClientRect?.() || { width: window.innerWidth - 64 };
+        const availableWidth = Math.max(620, wrapRect.width);
+        const availableHeight = Math.max(HEIGHT * 0.75, window.innerHeight - padding);
+        const targetWidth = Math.min(availableWidth, availableHeight / aspect);
+        const targetHeight = targetWidth * aspect;
+        viewScale = targetWidth / WIDTH;
+        canvas.width = Math.round(WIDTH * viewScale * DPR);
+        canvas.height = Math.round(HEIGHT * viewScale * DPR);
+        ctx.setTransform(viewScale * DPR, 0, 0, viewScale * DPR, 0, 0);
+        canvas.style.width = `${targetWidth}px`;
+        canvas.style.height = `${targetHeight}px`;
+      }
+
+      function resetGame() {
+        blocks = [];
+        orbs = [];
+        balls = [];
+        launchQueue = [];
+        totalBalls = 1;
+        pendingBalls = 0;
+        round = 1;
+        score = 0;
+        spawn = { x: WIDTH * 0.5, y: HEIGHT - 14 };
+        aimPoint = { x: WIDTH * 0.5, y: HEIGHT * 0.35 };
+        firstLanding = null;
+        aiming = true;
+        dragging = false;
+        gameOver = false;
+        simTime = 0;
+        lastTime = performance.now();
+        fastLocked = false;
+        fastHeld = false;
+        syncSpeedUi();
+        addRow();
+        updateUi();
+      }
+
+      function updateUi() {
+        roundEl.textContent = round;
+        ballsEl.textContent = totalBalls;
+        scoreEl.textContent = score;
+      }
+
+      function syncSpeedUi() {
+        fastForward = fastLocked || fastHeld;
+        speedValue.textContent = fastForward ? 'x3' : 'x1';
+        speedBtn.textContent = fastLocked ? '取消加速' : '加速 x3';
+        fastFlag.classList.toggle('show', fastForward);
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.();
+        } else {
+          document.exitFullscreen?.();
+        }
+      }
+
+      function syncFullscreenUi() {
+        fullscreenBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+      }
+
+      function pointerPos(evt) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (evt.clientX - rect.left) * (WIDTH / rect.width),
+          y: (evt.clientY - rect.top) * (HEIGHT / rect.height)
+        };
+      }
+
+      function handlePointerMove(evt) {
+        if (!aiming) return;
+        aimPoint = pointerPos(evt);
+      }
+
+      function handlePointerDown(evt) {
+        if (gameOver) return;
+        dragging = true;
+        if (aiming) {
+          aimPoint = pointerPos(evt);
+        }
+      }
+
+      function handlePointerUp(evt) {
+        if (gameOver || !dragging || !aiming) return;
+        dragging = false;
+        const target = pointerPos(evt);
+        startLaunch(target);
+      }
+
+      function startLaunch(target) {
+        let dx = target.x - spawn.x;
+        let dy = target.y - spawn.y;
+        if (dy > -16) dy = -16; // keep shot upward
+        const len = Math.hypot(dx, dy);
+        if (len < 12) return; // ignore tiny drags
+        dx /= len;
+        dy /= len;
+        launchQueue = [];
+        const baseTime = simTime;
+        for (let i = 0; i < totalBalls; i += 1) {
+          launchQueue.push({
+            time: baseTime + i * LAUNCH_SPACING,
+            vx: dx * BALL_SPEED,
+            vy: dy * BALL_SPEED
+          });
+        }
+        firstLanding = null;
+        aiming = false;
+      }
+
+      function launchFromQueue(simTimeMs) {
+        while (launchQueue.length && launchQueue[0].time <= simTimeMs) {
+          const { vx, vy } = launchQueue.shift();
+          balls.push({
+            x: spawn.x,
+            y: spawn.y,
+            vx,
+            vy,
+            active: true
+          });
+        }
+      }
+
+      function addRow() {
+        const baseY = BLOCK_SIZE * 0.5;
+        for (let col = 0; col < COLS; col += 1) {
+          const roll = Math.random();
+          const x = col * BLOCK_SIZE;
+          if (roll > 0.68) {
+            const hp = Math.max(1, round + Math.floor(Math.random() * (round * 0.6)));
+            blocks.push({ x, y: baseY, size: BLOCK_SIZE, hp });
+          } else if (roll > 0.48) {
+            orbs.push({
+              x: x + BLOCK_SIZE / 2,
+              y: baseY + BLOCK_SIZE / 2,
+              size: BLOCK_SIZE * 0.38
+            });
+          }
+        }
+      }
+
+      function shiftRowsDown() {
+        const delta = BLOCK_SIZE;
+        blocks.forEach(b => b.y += delta);
+        orbs.forEach(o => o.y += delta);
+      }
+
+      function checkGameOver() {
+        return blocks.some(b => b.y + b.size >= DANGER_Y);
+      }
+
+      function endTurn() {
+        totalBalls += pendingBalls;
+        pendingBalls = 0;
+        if (firstLanding !== null) {
+          spawn.x = clamp(firstLanding, BALL_RADIUS + 1, WIDTH - BALL_RADIUS - 1);
+        }
+        shiftRowsDown();
+        if (checkGameOver()) {
+          gameOver = true;
+          return;
+        }
+        round += 1;
+        addRow();
+        aiming = true;
+        updateUi();
+      }
+
+      function collideBlock(ball, block) {
+        const nearestX = clamp(ball.x, block.x, block.x + block.size);
+        const nearestY = clamp(ball.y, block.y, block.y + block.size);
+        const dx = ball.x - nearestX;
+        const dy = ball.y - nearestY;
+        const distSq = dx * dx + dy * dy;
+        if (distSq > BALL_RADIUS * BALL_RADIUS) return false;
+
+        const overlapX = Math.abs(dx);
+        const overlapY = Math.abs(dy);
+        const incomingX = ball.vx;
+        const incomingY = ball.vy;
+
+        if (overlapX > overlapY) {
+          ball.vx = incomingX > 0 ? -Math.abs(incomingX) : Math.abs(incomingX);
+          ball.x = incomingX > 0 ? block.x - BALL_RADIUS : block.x + block.size + BALL_RADIUS;
+        } else {
+          ball.vy = incomingY > 0 ? -Math.abs(incomingY) : Math.abs(incomingY);
+          ball.y = incomingY > 0 ? block.y - BALL_RADIUS : block.y + block.size + BALL_RADIUS;
+        }
+
+        block.hp -= 1;
+        if (block.hp <= 0) {
+          score += 1;
+          blocks = blocks.filter(b => b !== block);
+          updateUi();
+        }
+        return true;
+      }
+
+      function collideOrb(ball, orb) {
+        const dx = ball.x - orb.x;
+        const dy = ball.y - orb.y;
+        const limit = BALL_RADIUS + orb.size * 0.5;
+        if (dx * dx + dy * dy <= limit * limit) {
+          pendingBalls += 1;
+          orbs = orbs.filter(o => o !== orb);
+          return true;
+        }
+        return false;
+      }
+
+      function updateBalls(dt, simTimeMs) {
+        launchFromQueue(simTimeMs);
+        const nextBalls = [];
+        for (const ball of balls) {
+          if (!ball.active) continue;
+          ball.x += ball.vx * dt;
+          ball.y += ball.vy * dt;
+
+          // walls
+          if (ball.x - BALL_RADIUS < 0) {
+            ball.x = BALL_RADIUS;
+            ball.vx = Math.abs(ball.vx);
+          } else if (ball.x + BALL_RADIUS > WIDTH) {
+            ball.x = WIDTH - BALL_RADIUS;
+            ball.vx = -Math.abs(ball.vx);
+          }
+          if (ball.y - BALL_RADIUS < 0) {
+            ball.y = BALL_RADIUS;
+            ball.vy = Math.abs(ball.vy);
+          }
+
+          // blocks
+          for (const block of blocks) {
+            if (collideBlock(ball, block)) break;
+          }
+
+          // orbs
+          for (const orb of orbs) {
+            if (collideOrb(ball, orb)) break;
+          }
+
+          if (ball.y + BALL_RADIUS >= HEIGHT) {
+            ball.active = false;
+            if (firstLanding === null) firstLanding = ball.x;
+          } else {
+            nextBalls.push(ball);
+          }
+        }
+        balls = nextBalls;
+        if (!aiming && balls.length === 0 && launchQueue.length === 0) {
+          endTurn();
+        }
+      }
+
+      function drawBlocks() {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '600 18px "Space Grotesk", sans-serif';
+        for (const block of blocks) {
+          const t = Math.min(block.hp / (round + 4), 1);
+          const hue = 190 - 140 * t;
+          ctx.fillStyle = `hsl(${hue} 80% 50%)`;
+          ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(block.x + 3, block.y + 3, block.size - 6, block.size - 6, 12);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#06101f';
+          ctx.fillText(block.hp, block.x + block.size / 2, block.y + block.size / 2 + 1);
+        }
+      }
+
+      function drawOrbs() {
+        for (const orb of orbs) {
+          const r = orb.size * 0.5;
+          const gradient = ctx.createRadialGradient(orb.x - r * 0.3, orb.y - r * 0.3, r * 0.2, orb.x, orb.y, r);
+          gradient.addColorStop(0, '#fff');
+          gradient.addColorStop(1, '#6cf3ff');
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(orb.x, orb.y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = '#06101f';
+          ctx.font = '700 14px "Space Grotesk", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('+1', orb.x, orb.y);
+        }
+      }
+
+      function drawBalls() {
+        ctx.fillStyle = '#f4fbff';
+        balls.forEach(ball => {
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        if (!aiming && launchQueue.length) {
+          // tiny queue indicator at spawn
+          ctx.fillStyle = 'rgba(255,255,255,0.35)';
+          ctx.beginPath();
+          ctx.arc(spawn.x, spawn.y, BALL_RADIUS + 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // base marker
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.beginPath();
+        ctx.arc(spawn.x, spawn.y, BALL_RADIUS + 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawAim() {
+        if (!aiming || gameOver) return;
+        const dx = aimPoint.x - spawn.x;
+        const dy = aimPoint.y - spawn.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const dirX = dx / len;
+        const dirY = dy / len;
+        const dist = 120;
+        const endX = spawn.x + dirX * dist;
+        const endY = spawn.y + dirY * dist;
+        ctx.strokeStyle = 'rgba(108, 243, 255, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.moveTo(spawn.x, spawn.y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      function drawDangerLine() {
+        ctx.strokeStyle = 'rgba(225, 90, 122, 0.35)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, DANGER_Y);
+        ctx.lineTo(WIDTH, DANGER_Y);
+        ctx.stroke();
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+        drawDangerLine();
+        drawBlocks();
+        drawOrbs();
+        drawBalls();
+        drawAim();
+
+        if (gameOver) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+          ctx.fillRect(0, 0, WIDTH, HEIGHT);
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.font = '700 26px "Space Grotesk", sans-serif';
+          ctx.fillText('Game Over', WIDTH / 2, HEIGHT / 2 - 10);
+          ctx.font = '500 16px "Space Grotesk", sans-serif';
+          ctx.fillText('点击重新开局再来一把', WIDTH / 2, HEIGHT / 2 + 18);
+        }
+      }
+
+      function loop() {
+        const now = performance.now();
+        const realDt = Math.min((now - lastTime) / 1000, 0.04);
+        const speed = fastForward ? SPEED_MULT : 1;
+        simTime += realDt * speed * 1000;
+        if (!gameOver) {
+          updateBalls(realDt * speed, simTime);
+        }
+        render();
+        lastTime = now;
+        requestAnimationFrame(loop);
+      }
+
+      canvas.addEventListener('pointermove', handlePointerMove);
+      canvas.addEventListener('pointerdown', handlePointerDown);
+      window.addEventListener('pointerup', handlePointerUp);
+      restartBtn.addEventListener('click', resetGame);
+      fullscreenBtn.addEventListener('click', () => {
+        toggleFullscreen();
+      });
+      speedBtn.addEventListener('click', () => {
+        fastLocked = !fastLocked;
+        syncSpeedUi();
+      });
+      window.addEventListener('keydown', evt => {
+        if (evt.code === 'Space') {
+          evt.preventDefault();
+          fastHeld = true;
+          syncSpeedUi();
+        }
+      });
+      window.addEventListener('keyup', evt => {
+        if (evt.code === 'Space') {
+          fastHeld = false;
+          syncSpeedUi();
+        }
+      });
+      document.addEventListener('fullscreenchange', () => {
+        resizeCanvas();
+        syncFullscreenUi();
+      });
+      window.addEventListener('resize', resizeCanvas);
+      canvas.addEventListener('contextmenu', evt => evt.preventDefault());
+      canvas.style.touchAction = 'none';
+
+      resizeCanvas();
+      syncFullscreenUi();
+      resetGame();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
